@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Friendly-Service Support{% endblock %}</title>
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <img src="{{ url_for('static', filename='logo.png') }}" class="logo-icon" alt="logo">
+    <span class="logo-text">FS<span class="logo-accent">Support</span></span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('index') }}" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+      <span class="nav-icon">▦</span> Дашборд
+    </a>
+    <a href="{{ url_for('tickets') }}" class="nav-item {% if request.endpoint in ['tickets','ticket_detail'] %}active{% endif %}">
+      <span class="nav-icon">≡</span> Обращения
+    </a>
+    <a href="{{ url_for('new_ticket') }}" class="nav-item {% if request.endpoint == 'new_ticket' %}active{% endif %}">
+      <span class="nav-icon">＋</span> Новое обращение
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-status">
+      <span class="status-dot"></span> Система активна
+    </div>
+  </div>
+</aside>
+
+<main class="main-content">
+  <header class="topbar">
+    <div class="topbar-left">
+      {% block breadcrumb %}
+      <span class="breadcrumb">Дашборд</span>
+      {% endblock %}
+    </div>
+    <div class="topbar-right">
+      <a href="{{ url_for('new_ticket') }}" class="btn-new">
+        <span>＋</span> Зарегистрировать обращение
+      </a>
+    </div>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-messages">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="page-content">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

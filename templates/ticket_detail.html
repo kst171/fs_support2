@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}{{ ticket.ticket_number }} — HelpDesk Pro{% endblock %}
+{% block breadcrumb %}
+  <span class="breadcrumb"><a href="{{ url_for('tickets') }}">Обращения</a> / {{ ticket.ticket_number }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="detail-page">
+  <div class="detail-header">
+    <div class="detail-header-left">
+      <div class="ticket-number-large">{{ ticket.ticket_number }}</div>
+      <h1 class="detail-title">{{ ticket.title }}</h1>
+      <div class="detail-meta">
+        <span class="badge priority-{{ ticket.priority }}">{{ ticket.priority_label }}</span>
+        <span class="badge status-{{ ticket.status }}">{{ ticket.status_label }}</span>
+        <span class="badge category-{{ ticket.category }}">{{ ticket.category_label }}</span>
+        <span class="meta-date">Создано: {{ ticket.created_at.strftime('%d.%m.%Y в %H:%M') }}</span>
+      </div>
+    </div>
+    <div class="detail-header-right">
+      <form method="POST" onsubmit="return confirm('Удалить обращение?')">
+        <input type="hidden" name="action" value="delete">
+        <a href="{{ url_for('delete_ticket', id=ticket.id) }}" onclick="return confirm('Удалить обращение {{ ticket.ticket_number }}?')"
+           class="btn-danger" style="display:inline-block;text-decoration:none;">🗑 Удалить</a>
+      </form>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <!-- Left: main info -->
+    <div class="detail-main">
+      <div class="card">
+        <h3 class="card-title">Описание проблемы</h3>
+        <p class="description-text">{{ ticket.description }}</p>
+      </div>
+
+      {% if ticket.resolution %}
+      <div class="card card-resolved">
+        <h3 class="card-title">✅ Решение</h3>
+        <p class="description-text">{{ ticket.resolution }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Comments -->
+      <div class="card">
+        <h3 class="card-title">Комментарии ({{ comments|length }})</h3>
+
+        {% for c in comments %}
+        <div class="comment {% if c.is_internal %}comment-internal{% endif %}">
+          <div class="comment-header">
+            <span class="comment-author">{{ c.author }}</span>
+            {% if c.is_internal %}<span class="comment-tag">Внутренний</span>{% endif %}
+            <span class="comment-date">{{ c.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+          </div>
+          <p class="comment-text">{{ c.text }}</p>
+        </div>
+        {% else %}
+        <p class="no-comments">Комментариев пока нет.</p>
+        {% endfor %}
+
+        <form method="POST" class="comment-form">
+          <input type="hidden" name="action" value="add_comment">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Автор <span class="req">*</span></label>
+              <input type="text" name="author" class="form-input" required placeholder="Ваше имя">
+            </div>
+            <div class="form-group" style="flex:0 0 auto;display:flex;align-items:flex-end;">
+              <label class="checkbox-wrap">
+                <input type="checkbox" name="is_internal">
+                <span>Внутренний комментарий</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Текст комментария <span class="req">*</span></label>
+            <textarea name="text" class="form-textarea" rows="3" required placeholder="Добавьте комментарий..."></textarea>
+          </div>
+          <button type="submit" class="btn-secondary">Добавить комментарий</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Right: sidebar -->
+    <div class="detail-sidebar">
+      <!-- User info -->
+      <div class="card">
+        <h3 class="card-title">Пользователь</h3>
+        <dl class="info-list">
+          <dt>Имя</dt><dd>{{ ticket.user_name }}</dd>
+          <dt>Email</dt><dd><a href="mailto:{{ ticket.user_email }}">{{ ticket.user_email }}</a></dd>
+          {% if ticket.user_phone %}<dt>Телефон</dt><dd>{{ ticket.user_phone }}</dd>{% endif %}
+          {% if ticket.department %}<dt>Отдел</dt><dd>{{ ticket.department }}</dd>{% endif %}
+        </dl>
+      </div>
+
+      <!-- Update status -->
+      <div class="card">
+        <h3 class="card-title">Обновить статус</h3>
+        <form method="POST" class="status-form">
+          <input type="hidden" name="action" value="update_status">
+          <select name="status" class="form-select">
+            <option value="open" {% if ticket.status=='open' %}selected{% endif %}>Открыто</option>
+            <option value="in_progress" {% if ticket.status=='in_progress' %}selected{% endif %}>В работе</option>
+            <option value="waiting" {% if ticket.status=='waiting' %}selected{% endif %}>Ожидание</option>
+            <option value="closed" {% if ticket.status=='closed' %}selected{% endif %}>Закрыто</option>
+          </select>
+          <div class="form-group" id="resolution-group" style="{% if ticket.status != 'closed' %}display:none{% endif %}">
+            <label class="form-label">Описание решения</label>
+            <textarea name="resolution" class="form-textarea" rows="3" placeholder="Опишите, как была решена проблема...">{{ ticket.resolution or '' }}</textarea>
+          </div>
+          <button type="submit" class="btn-secondary" style="width:100%;margin-top:0.75rem;">Сохранить</button>
+        </form>
+      </div>
+
+      <!-- Edit ticket -->
+      <div class="card">
+        <h3 class="card-title">Редактировать</h3>
+        <form method="POST">
+          <input type="hidden" name="action" value="update_ticket">
+          <div class="form-group">
+            <label class="form-label">Тема</label>
+            <input type="text" name="title" class="form-input" value="{{ ticket.title }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Приоритет</label>
+            <select name="priority" class="form-select">
+              <option value="low" {% if ticket.priority=='low' %}selected{% endif %}>Низкий</option>
+              <option value="medium" {% if ticket.priority=='medium' %}selected{% endif %}>Средний</option>
+              <option value="high" {% if ticket.priority=='high' %}selected{% endif %}>Высокий</option>
+              <option value="critical" {% if ticket.priority=='critical' %}selected{% endif %}>Критический</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Категория</label>
+            <select name="category" class="form-select">
+              <option value="hardware" {% if ticket.category=='hardware' %}selected{% endif %}>Оборудование</option>
+              <option value="software" {% if ticket.category=='software' %}selected{% endif %}>ПО</option>
+              <option value="network" {% if ticket.category=='network' %}selected{% endif %}>Сеть</option>
+              <option value="access" {% if ticket.category=='access' %}selected{% endif %}>Доступы</option>
+              <option value="email" {% if ticket.category=='email' %}selected{% endif %}>Почта</option>
+              <option value="other" {% if ticket.category=='other' %}selected{% endif %}>Прочее</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Специалист</label>
+            <input type="text" name="assigned_to" class="form-input" value="{{ ticket.assigned_to or '' }}" placeholder="Не назначен">
+          </div>
+          <button type="submit" class="btn-secondary" style="width:100%;">Сохранить изменения</button>
+        </form>
+      </div>
+
+      <!-- Timestamps -->
+      <div class="card card-meta">
+        <dl class="info-list">
+          <dt>Создано</dt><dd class="mono">{{ ticket.created_at.strftime('%d.%m.%Y %H:%M') }}</dd>
+          <dt>Обновлено</dt><dd class="mono">{{ ticket.updated_at.strftime('%d.%m.%Y %H:%M') }}</dd>
+          {% if ticket.closed_at %}<dt>Закрыто</dt><dd class="mono">{{ ticket.closed_at.strftime('%d.%m.%Y %H:%M') }}</dd>{% endif %}
+          {% if ticket.assigned_to %}<dt>Исполнитель</dt><dd>{{ ticket.assigned_to }}</dd>{% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const statusSelect = document.querySelector('.status-form select[name="status"]');
+  const resolutionGroup = document.getElementById('resolution-group');
+  statusSelect.addEventListener('change', () => {
+    resolutionGroup.style.display = statusSelect.value === 'closed' ? 'block' : 'none';
+  });
+</script>
+{% endblock %}

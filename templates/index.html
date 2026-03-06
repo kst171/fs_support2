@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Дашборд — HelpDesk Pro{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+  <div class="page-header">
+    <h1 class="page-title">Дашборд</h1>
+    <p class="page-sub">Обзор текущего состояния обращений</p>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+
+    <a href="?filter=total" class="stat-card stat-total {% if active_filter=='total' %}stat-active{% endif %}">
+      <div class="stat-label">Всего обращений</div>
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-bar" style="--fill: 100%"></div>
+    </a>
+
+    <a href="?filter=open" class="stat-card stat-open {% if active_filter=='open' %}stat-active{% endif %}">
+      <div class="stat-label">Открытых</div>
+      <div class="stat-value">{{ stats.open }}</div>
+      <div class="stat-tag">требуют внимания</div>
+    </a>
+
+    <a href="?filter=in_progress" class="stat-card stat-progress {% if active_filter=='in_progress' %}stat-active{% endif %}">
+      <div class="stat-label">В работе</div>
+      <div class="stat-value">{{ stats.in_progress }}</div>
+      <div class="stat-tag">обрабатываются</div>
+    </a>
+
+    <a href="?filter=waiting" class="stat-card stat-waiting {% if active_filter=='waiting' %}stat-active{% endif %}">
+      <div class="stat-label">Ожидание</div>
+      <div class="stat-value">{{ stats.waiting }}</div>
+      <div class="stat-tag">ответа пользователя</div>
+    </a>
+
+    <a href="?filter=closed" class="stat-card stat-closed {% if active_filter=='closed' %}stat-active{% endif %}">
+      <div class="stat-label">Закрытых</div>
+      <div class="stat-value">{{ stats.closed }}</div>
+      <div class="stat-tag">решено</div>
+    </a>
+
+    <a href="?filter=critical" class="stat-card stat-critical {% if active_filter=='critical' %}stat-active{% endif %}">
+      <div class="stat-label">Критических</div>
+      <div class="stat-value">{{ stats.critical }}</div>
+      <div class="stat-tag">высший приоритет</div>
+    </a>
+
+  </div>
+
+  <!-- Список по фильтру с дашборда -->
+  {% if active_filter and filter_tickets is not none %}
+  <div class="section-header" id="filter-result">
+    <h2 class="section-title">
+      {% if active_filter == 'total' %}Все обращения
+      {% elif active_filter == 'open' %}Открытые обращения
+      {% elif active_filter == 'in_progress' %}Обращения в работе
+      {% elif active_filter == 'waiting' %}Обращения в ожидании
+      {% elif active_filter == 'closed' %}Закрытые обращения
+      {% elif active_filter == 'critical' %}Критические обращения
+      {% endif %}
+      <span class="filter-count">{{ filter_tickets|length }}</span>
+    </h2>
+    <a href="{{ url_for('index') }}" class="section-link">✕ Сбросить</a>
+  </div>
+
+  {% if filter_tickets %}
+  <div class="tickets-table-wrap">
+    <table class="tickets-table">
+      <thead>
+        <tr>
+          <th>№ Обращения</th>
+          <th>Тема</th>
+          <th>Пользователь</th>
+          <th>Приоритет</th>
+          <th>Статус</th>
+          <th>Создано</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in filter_tickets %}
+        <tr onclick="window.location='{{ url_for('ticket_detail', id=t.id) }}'" style="cursor:pointer">
+          <td><span class="ticket-num">{{ t.ticket_number }}</span></td>
+          <td class="ticket-title-cell">{{ t.title }}</td>
+          <td>
+            <div>{{ t.user_name }}</div>
+            <div class="ticket-email">{{ t.user_email }}</div>
+          </td>
+          <td><span class="badge priority-{{ t.priority }}">{{ t.priority_label }}</span></td>
+          <td><span class="badge status-{{ t.status }}">{{ t.status_label }}</span></td>
+          <td class="mono">{{ t.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📭</div>
+    <p>Обращений в этой категории нет.</p>
+  </div>
+  {% endif %}
+
+  {% else %}
+
+  <!-- Последние обращения (по умолчанию) -->
+  <div class="section-header">
+    <h2 class="section-title">Последние обращения</h2>
+    <a href="{{ url_for('tickets') }}" class="section-link">Все обращения →</a>
+  </div>
+
+  {% if recent %}
+  <div class="tickets-table-wrap">
+    <table class="tickets-table">
+      <thead>
+        <tr>
+          <th>№ Обращения</th>
+          <th>Тема</th>
+          <th>Пользователь</th>
+          <th>Приоритет</th>
+          <th>Статус</th>
+          <th>Создано</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in recent %}
+        <tr onclick="window.location='{{ url_for('ticket_detail', id=t.id) }}'" style="cursor:pointer">
+          <td><span class="ticket-num">{{ t.ticket_number }}</span></td>
+          <td class="ticket-title-cell">{{ t.title }}</td>
+          <td>{{ t.user_name }}</td>
+          <td><span class="badge priority-{{ t.priority }}">{{ t.priority_label }}</span></td>
+          <td><span class="badge status-{{ t.status }}">{{ t.status_label }}</span></td>
+          <td class="mono">{{ t.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📭</div>
+    <p>Обращений пока нет. <a href="{{ url_for('new_ticket') }}">Создайте первое!</a></p>
+  </div>
+  {% endif %}
+
+  {% endif %}
+</div>
+
+<!-- Автоскролл к результатам -->
+{% if active_filter %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('filter-result');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+</script>
+{% endif %}
+
+{% endblock %}

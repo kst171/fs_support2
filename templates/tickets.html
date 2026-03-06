@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Обращения — HelpDesk Pro{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb">Обращения</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Все обращения</h1>
+  <p class="page-sub">Управление и фильтрация заявок</p>
+</div>
+
+<!-- Filters -->
+<form class="filter-bar" method="GET" action="{{ url_for('tickets') }}">
+
+  <!-- Поиск -->
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" name="q" value="{{ search_query }}"
+           placeholder="Поиск по номеру, теме, имени..." class="search-input">
+  </div>
+
+  <!-- Статус -->
+  <select name="status" class="filter-select" onchange="this.form.submit()">
+    <option value="all"         {% if status_filter=='all' %}selected{% endif %}>Все статусы</option>
+    <option value="open"        {% if status_filter=='open' %}selected{% endif %}>Открыто</option>
+    <option value="in_progress" {% if status_filter=='in_progress' %}selected{% endif %}>В работе</option>
+    <option value="waiting"     {% if status_filter=='waiting' %}selected{% endif %}>Ожидание</option>
+    <option value="closed"      {% if status_filter=='closed' %}selected{% endif %}>Закрыто</option>
+  </select>
+
+  <!-- Приоритет -->
+  <select name="priority" class="filter-select" onchange="this.form.submit()">
+    <option value="all"      {% if priority_filter=='all' %}selected{% endif %}>Все приоритеты</option>
+    <option value="critical" {% if priority_filter=='critical' %}selected{% endif %}>Критический</option>
+    <option value="high"     {% if priority_filter=='high' %}selected{% endif %}>Высокий</option>
+    <option value="medium"   {% if priority_filter=='medium' %}selected{% endif %}>Средний</option>
+    <option value="low"      {% if priority_filter=='low' %}selected{% endif %}>Низкий</option>
+  </select>
+
+  <!-- Категория -->
+  <select name="category" class="filter-select" onchange="this.form.submit()">
+    <option value="all"      {% if category_filter=='all' %}selected{% endif %}>Все категории</option>
+    <option value="hardware" {% if category_filter=='hardware' %}selected{% endif %}>Оборудование</option>
+    <option value="software" {% if category_filter=='software' %}selected{% endif %}>ПО</option>
+    <option value="network"  {% if category_filter=='network' %}selected{% endif %}>Сеть</option>
+    <option value="access"   {% if category_filter=='access' %}selected{% endif %}>Доступы</option>
+    <option value="email"    {% if category_filter=='email' %}selected{% endif %}>Почта</option>
+    <option value="other"    {% if category_filter=='other' %}selected{% endif %}>Прочее</option>
+  </select>
+
+  <!-- Фильтр по дате -->
+  <div class="date-range">
+    <div class="date-field">
+      <label class="date-label">С</label>
+      <input type="date" name="date_from" value="{{ date_from }}"
+             class="filter-date" onchange="this.form.submit()">
+    </div>
+    <span class="date-sep">—</span>
+    <div class="date-field">
+      <label class="date-label">По</label>
+      <input type="date" name="date_to" value="{{ date_to }}"
+             class="filter-date" onchange="this.form.submit()">
+    </div>
+  </div>
+
+  <button type="submit" class="btn-filter">Применить</button>
+  <a href="{{ url_for('tickets') }}" class="btn-reset">Сбросить</a>
+
+</form>
+
+<!-- Активные фильтры дат -->
+{% if date_from or date_to %}
+<div class="active-filters">
+  <span class="active-filter-label">📅 Период:</span>
+  {% if date_from %}
+    <span class="active-filter-tag">с {{ date_from | replace('-', '.') | reverse | replace('.', '.', 1) }}</span>
+  {% endif %}
+  {% if date_to %}
+    <span class="active-filter-tag">по {{ date_to | replace('-', '.') | reverse | replace('.', '.', 1) }}</span>
+  {% endif %}
+  <a href="{{ url_for('tickets', status=status_filter, priority=priority_filter, category=category_filter, q=search_query) }}"
+     class="active-filter-clear">✕ Сбросить даты</a>
+</div>
+{% endif %}
+
+{% if tickets.items %}
+<div class="tickets-table-wrap">
+  <table class="tickets-table">
+    <thead>
+      <tr>
+        <th>№ заявки</th>
+        <th>Тема</th>
+        <th>Заказчик</th>
+        <th>Категория</th>
+        <th>Приоритет</th>
+        <th>Статус</th>
+        <th>Дата создания</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tickets.items %}
+      <tr>
+        <td><span class="ticket-num">{{ t.ticket_number }}</span></td>
+        <td class="ticket-title-cell">
+          <a href="{{ url_for('ticket_detail', id=t.id) }}">{{ t.title }}</a>
+          {% if t.department %}<div class="ticket-dept">{{ t.department }}</div>{% endif %}
+        </td>
+        <td>
+          <div>{{ t.user_name }}</div>
+          <div class="ticket-email">{{ t.user_email }}</div>
+        </td>
+        <td><span class="badge category-{{ t.category }}">{{ t.category_label }}</span></td>
+        <td><span class="badge priority-{{ t.priority }}">{{ t.priority_label }}</span></td>
+        <td><span class="badge status-{{ t.status }}">{{ t.status_label }}</span></td>
+        <td class="mono">{{ t.created_at.strftime('%d.%m.%y') }}</td>
+        <td>
+          <a href="{{ url_for('ticket_detail', id=t.id) }}" class="action-btn">→</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+<div class="pagination">
+  {% if tickets.has_prev %}
+    <a href="{{ url_for('tickets', page=tickets.prev_num, status=status_filter, priority=priority_filter, category=category_filter, q=search_query) }}" class="page-btn">← Назад</a>
+  {% endif %}
+  <span class="page-info">Страница {{ tickets.page }} из {{ tickets.pages }} ({{ tickets.total }} записей)</span>
+  {% if tickets.has_next %}
+    <a href="{{ url_for('tickets', page=tickets.next_num, status=status_filter, priority=priority_filter, category=category_filter, q=search_query) }}" class="page-btn">Далее →</a>
+  {% endif %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">🔎</div>
+  <p>Обращений не найдено. <a href="{{ url_for('tickets') }}">Сбросить фильтры</a> или <a href="{{ url_for('new_ticket') }}">создать новое.</a></p>
+</div>
+{% endif %}
+{% endblock %}
