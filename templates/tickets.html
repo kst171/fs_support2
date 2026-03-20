@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Обращения — HelpDesk Pro{% endblock %}
-{% block breadcrumb %}<span class="breadcrumb">Обращения</span>{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb">Список обращений</span>{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <h1 class="page-title">Все обращения</h1>
-  <p class="page-sub">Управление и фильтрация заявок</p>
+  <p class="page-sub">Управление и фильтрация обращений</p>
 </div>
 
 <!-- Filters -->
@@ -18,13 +18,22 @@
            placeholder="Поиск по номеру, теме, имени..." class="search-input">
   </div>
 
-  <!-- Статус -->
-  <select name="status" class="filter-select" onchange="this.form.submit()">
-    <option value="all"         {% if status_filter=='all' %}selected{% endif %}>Все статусы</option>
-    <option value="open"        {% if status_filter=='open' %}selected{% endif %}>Открыто</option>
-    <option value="in_progress" {% if status_filter=='in_progress' %}selected{% endif %}>В работе</option>
-    <option value="waiting"     {% if status_filter=='waiting' %}selected{% endif %}>Ожидание</option>
-    <option value="closed"      {% if status_filter=='closed' %}selected{% endif %}>Закрыто</option>
+    <!-- Фильтр по заказчику -->
+  <select name="customer" class="filter-select" onchange="this.form.submit()">
+    <option value="" {% if not customer_filter %}selected{% endif %}>Все заказчики</option>
+    {% for c in customers %}
+      <option value="{{ c }}" {% if customer_filter == c %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+
+    <!-- Категория -->
+  <select name="category" class="filter-select" onchange="this.form.submit()">
+    <option value="all"      {% if category_filter=='all' %}selected{% endif %}>Все категории</option>
+    <option value="hardware" {% if category_filter=='hardware' %}selected{% endif %}>Оборудование</option>
+    <option value="software" {% if category_filter=='software' %}selected{% endif %}>ПО</option>
+    <option value="network"  {% if category_filter=='network' %}selected{% endif %}>Сеть</option>
+    <option value="access"   {% if category_filter=='access' %}selected{% endif %}>Доступы</option>
+    <option value="other"    {% if category_filter=='other' %}selected{% endif %}>Прочее</option>
   </select>
 
   <!-- Приоритет -->
@@ -35,18 +44,16 @@
     <option value="medium"   {% if priority_filter=='medium' %}selected{% endif %}>Средний</option>
     <option value="low"      {% if priority_filter=='low' %}selected{% endif %}>Низкий</option>
   </select>
-
-  <!-- Категория -->
-  <select name="category" class="filter-select" onchange="this.form.submit()">
-    <option value="all"      {% if category_filter=='all' %}selected{% endif %}>Все категории</option>
-    <option value="hardware" {% if category_filter=='hardware' %}selected{% endif %}>Оборудование</option>
-    <option value="software" {% if category_filter=='software' %}selected{% endif %}>ПО</option>
-    <option value="network"  {% if category_filter=='network' %}selected{% endif %}>Сеть</option>
-    <option value="access"   {% if category_filter=='access' %}selected{% endif %}>Доступы</option>
-    <option value="email"    {% if category_filter=='email' %}selected{% endif %}>Почта</option>
-    <option value="other"    {% if category_filter=='other' %}selected{% endif %}>Прочее</option>
+  
+  <!-- Статус -->
+  <select name="status" class="filter-select" onchange="this.form.submit()">
+    <option value="all"         {% if status_filter=='all' %}selected{% endif %}>Все статусы</option>
+    <option value="open"        {% if status_filter=='open' %}selected{% endif %}>Открыто</option>
+    <option value="in_progress" {% if status_filter=='in_progress' %}selected{% endif %}>В работе</option>
+    <option value="waiting"     {% if status_filter=='waiting' %}selected{% endif %}>Ожидание</option>
+    <option value="closed"      {% if status_filter=='closed' %}selected{% endif %}>Закрыто</option>
   </select>
-
+  
   <!-- Фильтр по дате -->
   <div class="date-range">
     <div class="date-field">
@@ -66,6 +73,16 @@
   <a href="{{ url_for('tickets') }}" class="btn-reset">Сбросить</a>
 
 </form>
+
+{% if customer_filter %}
+<div class="active-filters">
+  <span class="active-filter-label">👤 Заказчик:</span>
+  <span class="active-filter-tag">{{ customer_filter }}</span>
+  <a href="{{ url_for('tickets', status=status_filter, priority=priority_filter,
+             category=category_filter, date_from=date_from, date_to=date_to, q=search_query) }}"
+     class="active-filter-clear">✕ Сбросить</a>
+</div>
+{% endif %}
 
 <!-- Активные фильтры дат -->
 {% if date_from or date_to %}
@@ -87,7 +104,7 @@
   <table class="tickets-table">
     <thead>
       <tr>
-        <th>№ заявки</th>
+        <th>№ обращения</th>
         <th>Тема</th>
         <th>Заказчик</th>
         <th>Категория</th>
@@ -125,11 +142,27 @@
 <!-- Pagination -->
 <div class="pagination">
   {% if tickets.has_prev %}
-    <a href="{{ url_for('tickets', page=tickets.prev_num, status=status_filter, priority=priority_filter, category=category_filter, q=search_query) }}" class="page-btn">← Назад</a>
+    <a href="{{ url_for('tickets',
+               page=tickets.prev_num,
+               status=status_filter,
+               priority=priority_filter,
+               category=category_filter,
+               customer=customer_filter,
+               date_from=date_from,
+               date_to=date_to,
+               q=search_query) }}" class="page-btn">← Назад</a>
   {% endif %}
   <span class="page-info">Страница {{ tickets.page }} из {{ tickets.pages }} ({{ tickets.total }} записей)</span>
   {% if tickets.has_next %}
-    <a href="{{ url_for('tickets', page=tickets.next_num, status=status_filter, priority=priority_filter, category=category_filter, q=search_query) }}" class="page-btn">Далее →</a>
+    <a href="{{ url_for('tickets',
+               page=tickets.next_num,
+               status=status_filter,
+               priority=priority_filter,
+               category=category_filter,
+               customer=customer_filter,
+               date_from=date_from,
+               date_to=date_to,
+               q=search_query) }}" class="page-btn">Далее →</a>
   {% endif %}
 </div>
 

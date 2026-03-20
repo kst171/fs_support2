@@ -32,6 +32,7 @@ class Ticket(db.Model):
     closed_at     = db.Column(db.DateTime, nullable=True)
 
     comments = db.relationship('Comment', backref='ticket', lazy=True, cascade='all, delete-orphan')
+    attachments  = db.relationship('Attachment', backref='ticket', lazy=True, cascade='all, delete-orphan')
 
 
     def __repr__(self):
@@ -68,3 +69,30 @@ class Comment(db.Model):
     text        = db.Column(db.Text, nullable=False)
     is_internal = db.Column(db.Boolean, default=False)
     created_at  = db.Column(db.DateTime, default=now_local)
+
+
+class Attachment(db.Model):
+    __tablename__ = 'attachments'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    ticket_id   = db.Column(db.Integer, db.ForeignKey('tickets.id'), nullable=False)
+    filename    = db.Column(db.String(255), nullable=False)   # оригинальное имя
+    saved_name  = db.Column(db.String(255), nullable=False)   # уникальное имя на диске
+    mimetype    = db.Column(db.String(100), nullable=True)
+    size        = db.Column(db.Integer, nullable=True)        # байты
+    created_at  = db.Column(db.DateTime, default=now_local)
+
+    @property
+    def is_image(self):
+        return self.mimetype and self.mimetype.startswith('image/')
+
+    @property
+    def size_human(self):
+        if not self.size:
+            return '—'
+        if self.size < 1024:
+            return f'{self.size} Б'
+        elif self.size < 1024 * 1024:
+            return f'{self.size // 1024} КБ'
+        else:
+            return f'{self.size / 1024 / 1024:.1f} МБ'

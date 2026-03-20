@@ -23,10 +23,10 @@
       <span class="nav-icon">▦</span> Дашборд
     </a>
     <a href="{{ url_for('tickets') }}" class="nav-item {% if request.endpoint in ['tickets','ticket_detail'] %}active{% endif %}">
-      <span class="nav-icon">≡</span> Обращения
+      <span class="nav-icon">≡</span> Все обращения
     </a>
     <a href="{{ url_for('new_ticket') }}" class="nav-item {% if request.endpoint == 'new_ticket' %}active{% endif %}">
-      <span class="nav-icon">＋</span> Новое обращение
+      <span class="nav-icon">＋</span> Зарегистрировать обращение
     </a>
   </nav>
 
@@ -34,6 +34,14 @@
     <div class="sidebar-status">
       <span class="status-dot"></span> Система активна
     </div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+      <span id="themeIcon">☀️</span>
+      <span id="themeLabel">Светлая</span>
+    </button>
+    <button class="theme-toggle" id="logToggle" onclick="toggleLogs()">
+      <span id="logIcon">⚡</span>
+      <span>Логи сервера</span>
+    </button>
   </div>
 </aside>
 
@@ -43,11 +51,6 @@
       {% block breadcrumb %}
       <span class="breadcrumb">Дашборд</span>
       {% endblock %}
-    </div>
-    <div class="topbar-right">
-      <a href="{{ url_for('new_ticket') }}" class="btn-new">
-        <span>＋</span> Зарегистрировать обращение
-      </a>
     </div>
   </header>
 
@@ -66,6 +69,156 @@
   </div>
 </main>
 
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<!-- Панель логов -->
+<div class="log-panel" id="logPanel" style="display:none">
+  <div class="log-panel-header">
+    <div class="log-panel-title">
+      <span class="log-live-dot"></span>
+      Логи сервера
+    </div>
+    <div class="log-panel-controls">
+      <label class="log-autoscroll-label">
+        <input type="checkbox" id="autoscroll" checked> Автоскролл
+      </label>
+      <button class="log-btn" onclick="clearLogs()">🗑 Очистить</button>
+      <button class="log-btn" onclick="toggleLogs()">✕</button>
+    </div>
+  </div>
+
+  <div class="log-filters">
+    <button class="log-filter-btn active" data-level="ALL"     onclick="setFilter(this)">Все</button>
+    <button class="log-filter-btn" data-level="INFO"           onclick="setFilter(this)">INFO</button>
+    <button class="log-filter-btn" data-level="WARNING"        onclick="setFilter(this)">WARNING</button>
+    <button class="log-filter-btn" data-level="ERROR"          onclick="setFilter(this)">ERROR</button>
+    <button class="log-filter-btn" data-level="DEBUG"          onclick="setFilter(this)">DEBUG</button>
+    <input type="text" id="logSearch" class="log-search" placeholder="Поиск в логах...">
+  </div>
+
+  <div class="log-body" id="logBody"></div>
+
+  <div class="log-panel-footer">
+    <span id="logCount" class="log-count">0 записей</span>
+    <span class="log-hint">Обновляется каждые 2 сек</span>
+  </div>
+</div>
+
+<script>
+  let allLogs      = [];
+  let currentFilter = 'ALL';
+  let logInterval  = null;
+  let isPanelOpen  = false;
+
+  function toggleLogs() {
+  const panel  = document.getElementById('logPanel');
+  const toggle = document.getElementById('logToggle');
+  const icon   = document.getElementById('logIcon');
+  isPanelOpen  = !isPanelOpen;
+
+  if (isPanelOpen) {
+    panel.style.display  = 'flex';
+    setTimeout(() => panel.classList.add('open'), 10);
+    toggle.style.borderColor = 'var(--accent)';
+    toggle.style.color       = 'var(--accent)';
+    icon.textContent         = '⚡';
+    startPolling();
+  } else {
+    panel.classList.remove('open');
+    setTimeout(() => panel.style.display = 'none', 300);
+    toggle.style.borderColor = '';
+    toggle.style.color       = '';
+    stopPolling();
+  }
+}
+
+  function startPolling() {
+    fetchLogs();
+    logInterval = setInterval(fetchLogs, 2000);
+  }
+
+  function stopPolling() {
+    clearInterval(logInterval);
+    logInterval = null;
+  }
+
+  async function fetchLogs() {
+    try {
+      const res  = await fetch('/api/logs');
+      const data = await res.json();
+      allLogs    = data;
+      renderLogs();
+    } catch(e) {}
+  }
+
+  function renderLogs() {
+    const search  = document.getElementById('logSearch').value.toLowerCase();
+    const body    = document.getElementById('logBody');
+    const auto    = document.getElementById('autoscroll').checked;
+    const atBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 30;
+
+    const filtered = allLogs.filter(log => {
+      const matchLevel  = currentFilter === 'ALL' || log.level === currentFilter;
+      const matchSearch = !search || log.message.toLowerCase().includes(search);
+      return matchLevel && matchSearch;
+    });
+
+    body.innerHTML = filtered.map(log => `
+      <div class="log-line log-${log.level.toLowerCase()}">
+        <span class="log-time">${log.time}</span>
+        <span class="log-level">${log.level}</span>
+        <span class="log-msg">${escapeHtml(log.message)}</span>
+      </div>
+    `).join('');
+
+    document.getElementById('logCount').textContent = `${filtered.length} записей`;
+
+    if (auto && atBottom) body.scrollTop = body.scrollHeight;
+  }
+
+  function setFilter(btn) {
+    document.querySelectorAll('.log-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.level;
+    renderLogs();
+  }
+
+  function clearLogs() {
+    allLogs = [];
+    document.getElementById('logBody').innerHTML = '';
+    document.getElementById('logCount').textContent = '0 записей';
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  document.getElementById('logSearch').addEventListener('input', renderLogs);
+</script>
+
+<script>
+  // Применить сохранённую тему при загрузке
+  (function () {
+    const saved = localStorage.getItem('theme') || 'light';
+    if (saved === 'dark') {
+      document.body.classList.add('dark');
+      document.getElementById('themeIcon').textContent  = '🌙';
+      document.getElementById('themeLabel').textContent = 'Тёмная';
+    }
+  })();
+
+  function toggleTheme() {
+    const isDark = document.body.classList.toggle('dark');
+    const icon   = document.getElementById('themeIcon');
+    const label  = document.getElementById('themeLabel');
+    if (isDark) {
+      icon.textContent  = '🌙';
+      label.textContent = 'Тёмная';
+      localStorage.setItem('theme', 'dark');
+    } else {
+      icon.textContent  = '☀️';
+      label.textContent = 'Светлая';
+      localStorage.setItem('theme', 'light');
+    }
+  }
+</script>
 </body>
 </html>

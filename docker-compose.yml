@@ -31,11 +31,14 @@ services:
       SECRET_KEY: super-secret-key-change-in-production
       FLASK_ENV: development
       FLASK_DEBUG: "1"
+      TIMEZONE: Europe/Moscow
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - .:/app
+      - uploads_data:/app/uploads
 
 volumes:
   postgres_data:
+  uploads_data:

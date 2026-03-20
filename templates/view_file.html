@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ filename }} — HelpDesk Pro{% endblock %}
+{% block breadcrumb %}
+  <span class="breadcrumb">Просмотр файла / {{ filename }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="file-viewer-page">
+  <div class="file-viewer-header">
+    <div class="file-viewer-name">
+      <span class="file-viewer-icon">
+        {% if ext == 'json' %}{ }
+        {% elif ext == 'xml' %}&lt;/&gt;
+        {% elif ext == 'csv' %}⊞
+        {% elif ext == 'md' %}M↓
+        {% else %}📄{% endif %}
+      </span>
+      <span>{{ filename }}</span>
+    </div>
+    <button class="btn-copy" onclick="copyContent()">📋 Копировать</button>
+  </div>
+
+  <div class="file-viewer-wrap">
+    <div class="file-viewer-lines" id="lineNumbers"></div>
+    <pre class="file-viewer-content" id="fileContent">{{ content }}</pre>
+  </div>
+
+  <div class="file-viewer-footer">
+    <span class="file-viewer-stat" id="lineCount"></span>
+    <span class="file-viewer-stat" id="charCount"></span>
+  </div>
+</div>
+
+<script>
+  const content = document.getElementById('fileContent').textContent;
+  const lines   = content.split('\n');
+
+  // Нумерация строк
+  const nums = document.getElementById('lineNumbers');
+  nums.innerHTML = lines.map((_, i) => `<span>${i + 1}</span>`).join('');
+
+  // Статистика
+  document.getElementById('lineCount').textContent = `Строк: ${lines.length}`;
+  document.getElementById('charCount').textContent = `Символов: ${content.length}`;
+
+  // Подсветка JSON
+  const ext = '{{ ext }}';
+  if (ext === 'json') {
+    try {
+      const parsed  = JSON.parse(content);
+      const pretty  = JSON.stringify(parsed, null, 2);
+      document.getElementById('fileContent').textContent = pretty;
+    } catch(e) {}
+  }
+
+  // Копирование
+  function copyContent() {
+    navigator.clipboard.writeText(content).then(() => {
+      const btn = document.querySelector('.btn-copy');
+      btn.textContent = '✅ Скопировано';
+      setTimeout(() => btn.textContent = '📋 Копировать', 2000);
+    });
+  }
+
+  // Синхронизация скролла номеров строк
+  const viewer = document.querySelector('.file-viewer-wrap');
+  viewer.addEventListener('scroll', () => {
+    nums.style.transform = `translateY(-${viewer.scrollTop}px)`;
+  });
+</script>
+{% endblock %}

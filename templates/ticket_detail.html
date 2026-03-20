@@ -18,10 +18,9 @@
       </div>
     </div>
     <div class="detail-header-right">
-      <form method="POST" onsubmit="return confirm('Удалить обращение?')">
-        <input type="hidden" name="action" value="delete">
-        <a href="{{ url_for('delete_ticket', id=ticket.id) }}" onclick="return confirm('Удалить обращение {{ ticket.ticket_number }}?')"
-           class="btn-danger" style="display:inline-block;text-decoration:none;">🗑 Удалить</a>
+      <form method="POST" action="{{ url_for('delete_ticket', id=ticket.id) }}"
+            onsubmit="return confirm('Удалить обращение {{ ticket.ticket_number }}?')">
+        <button type="submit" class="btn-danger">🗑 Удалить</button>
       </form>
     </div>
   </div>
@@ -33,6 +32,61 @@
         <h3 class="card-title">Описание проблемы</h3>
         <p class="description-text">{{ ticket.description }}</p>
       </div>
+      {% set atts = ticket.attachments %}
+      {% if atts %}
+      <div class="card">
+        <h3 class="card-title">📎 Вложения ({{ atts|length }})</h3>
+        <div class="attachment-grid">
+          {% for a in atts %}
+          <div class="attachment-item">
+            {% if a.is_image %}
+              <a href="{{ url_for('uploaded_file', filename=a.saved_name) }}"
+                target="_blank" class="attachment-thumb-wrap">
+                <img src="{{ url_for('uploaded_file', filename=a.saved_name) }}"
+                    class="attachment-thumb" alt="{{ a.filename }}">
+              </a>
+            {% else %}
+              <a href="{{ url_for('uploaded_file', filename=a.saved_name) }}"
+                target="_blank" class="attachment-file">
+                <span class="attachment-file-icon">
+                  {% set ext = a.filename.rsplit('.', 1)[-1].lower() %}
+                  {% if ext == 'pdf' %}📕
+                  {% elif ext in ['doc','docx'] %}📘
+                  {% elif ext in ['xls','xlsx'] %}📗
+                  {% elif ext == 'json' %}{ }
+                  {% elif ext == 'xml' %}&lt;/&gt;
+                  {% elif ext == 'csv' %}⊞
+                  {% else %}📄{% endif %}
+                </span>
+              </a>
+            {% endif %}
+
+            <div class="attachment-info">
+              <a href="{{ url_for('uploaded_file', filename=a.saved_name) }}"
+                target="_blank" class="attachment-name" title="{{ a.filename }}">
+                {{ a.filename }}
+              </a>
+              <div class="attachment-actions">
+                <span class="attachment-size">{{ a.size_human }}</span>
+                {% set ext = a.filename.rsplit('.', 1)[-1].lower() %}
+                {% if ext in ['txt','log','csv','json','xml','md'] %}
+                  <a href="{{ url_for('view_file', filename=a.saved_name) }}"
+                    target="_blank" class="attachment-action-btn">👁 Читать</a>
+                {% endif %}
+                <a href="{{ url_for('uploaded_file', filename=a.saved_name) }}"
+                  download="{{ a.filename }}" class="attachment-action-btn">⬇ Скачать</a>
+              </div>
+            </div>
+
+            <form method="POST" action="{{ url_for('delete_attachment', att_id=a.id) }}"
+                  onsubmit="return confirm('Удалить вложение?')" class="attachment-delete-form">
+              <button type="submit" class="attachment-delete" title="Удалить">✕</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
 
       {% if ticket.resolution %}
       <div class="card card-resolved">
@@ -58,7 +112,7 @@
         <p class="no-comments">Комментариев пока нет.</p>
         {% endfor %}
 
-        <form method="POST" class="comment-form">
+        <form method="POST" class="comment-form" enctype="multipart/form-data">
           <input type="hidden" name="action" value="add_comment">
           <div class="form-row">
             <div class="form-group">
@@ -76,6 +130,22 @@
             <label class="form-label">Текст комментария <span class="req">*</span></label>
             <textarea name="text" class="form-textarea" rows="3" required placeholder="Добавьте комментарий..."></textarea>
           </div>
+          <div class="form-group">
+            <label class="form-label">Прикрепить файлы</label>
+            <div class="upload-area upload-area-sm"
+                onclick="document.getElementById('comment_attachments').click()"
+                ondragover="event.preventDefault();this.classList.add('drag-over')"
+                ondragleave="this.classList.remove('drag-over')"
+                ondrop="handleDrop(event,'comment_attachments','commentPreview')">
+              <span class="upload-icon-sm">📎</span>
+              <span class="upload-text">Нажмите или перетащите файлы</span>
+              <input type="file" id="comment_attachments" name="attachments" multiple
+                    accept=".png,.jpg,.jpeg,.gif,.webp,.txt,.log,.csv,.json,.xml,.md,.pdf,.doc,.docx,.xls,.xlsx"
+                    onchange="handleInput(this,'commentPreview')"
+                    style="display:none">
+            </div>
+            <div class="upload-preview" id="commentPreview"></div>
+          </div>
           <button type="submit" class="btn-secondary">Добавить комментарий</button>
         </form>
       </div>
@@ -85,7 +155,7 @@
     <div class="detail-sidebar">
       <!-- User info -->
       <div class="card">
-        <h3 class="card-title">Пользователь</h3>
+        <h3 class="card-title">Заказчик</h3>
         <dl class="info-list">
           <dt>Имя</dt><dd>{{ ticket.user_name }}</dd>
           <dt>Email</dt><dd><a href="mailto:{{ ticket.user_email }}">{{ ticket.user_email }}</a></dd>

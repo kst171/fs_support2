@@ -1,0 +1,30 @@
+# Виртуальное окружение
+venv/
+
+# Переменные окружения
+.env
+
+# Загруженные файлы
+uploads/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Миграции (опционально — можно включить)
+# migrations/
+
+# БД (если локальная)
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

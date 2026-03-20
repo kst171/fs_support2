@@ -8,10 +8,10 @@
 <div class="form-page">
   <div class="page-header">
     <h1 class="page-title">Новое обращение</h1>
-    <p class="page-sub">Заполните все обязательные поля для регистрации заявки</p>
+    <p class="page-sub">Заполните все обязательные поля для регистрации обращения</p>
   </div>
 
-  <form class="ticket-form" method="POST" action="{{ url_for('new_ticket') }}">
+  <form class="ticket-form" method="POST" action="{{ url_for('new_ticket') }}" enctype="multipart/form-data">
 
     <div class="form-section">
       <h3 class="form-section-title">Информация о заказчике</h3>
@@ -27,12 +27,12 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Телефон</label>
-          <input type="text" name="user_phone" class="form-input" placeholder="+7 (999) 000-00-00">
+          <label class="form-label">Телефон <span class="req">*</span></label>
+          <input type="text" name="user_phone" class="form-input" placeholder="+375 (29) 000-00-00" required>
         </div>
         <div class="form-group">
-          <label class="form-label">Email <span class="req">*</span></label>
-          <input type="email" name="user_email" class="form-input" placeholder="user@company.ru" required>
+          <label class="form-label">Email </label>
+          <input type="email" name="user_email" class="form-input" placeholder="user@company.by">
         </div>
         <div class="form-group">
           <label class="form-label">Должность</label>
@@ -82,6 +82,26 @@
           <input type="text" name="assigned_to" class="form-input" placeholder="ФИО специалиста">
         </div>
       </div>
+    </div>
+
+    <div class="form-section">
+      <h3 class="form-section-title">Вложения</h3>
+
+      <input type="file" id="attachments" name="attachments" multiple
+             accept=".png,.jpg,.jpeg,.gif,.webp,.txt,.log,.csv,.json,.xml,.md,.pdf,.doc,.docx,.xls,.xlsx"
+             style="display:none">
+
+      <div class="upload-area" id="uploadArea"
+           onclick="document.getElementById('attachments').click()"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="handleDrop(event,'attachments','uploadPreview')">
+        <div class="upload-icon">📎</div>
+        <p class="upload-text">Нажмите или перетащите файлы сюда</p>
+        <p class="upload-hint">Изображения, текстовые файлы, PDF, документы — до 10 МБ каждый</p>
+      </div>
+
+      <div class="upload-preview" id="uploadPreview"></div>
     </div>
 
     <div class="form-actions">
